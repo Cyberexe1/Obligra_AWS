@@ -89,7 +89,7 @@ async def create_text_source(
         update_source_status(source_id, "failed")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to extract obligations: {exc}",
+            detail="Failed to extract obligations. Please try again.",
         ) from exc
     except Exception as exc:  # noqa: BLE001 - surface unexpected errors as a clean 500 instead of crashing
         logger.exception("Unexpected error extracting obligations for source %s", source_id)

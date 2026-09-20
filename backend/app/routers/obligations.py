@@ -120,7 +120,7 @@ async def analyze_dependencies(
         logger.warning("Dependency detection failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to analyze dependencies: {exc}",
+            detail="Failed to analyze dependencies. Please try again.",
         ) from exc
     except Exception as exc:  # noqa: BLE001 - surface unexpected errors as a clean 500 instead of crashing
         logger.exception("Unexpected error during dependency analysis")

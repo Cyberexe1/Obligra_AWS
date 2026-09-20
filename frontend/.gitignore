@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment files (may contain deployment-specific URLs/config).
+# .env.example is intentionally NOT ignored - it's the template.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

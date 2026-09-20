@@ -113,9 +113,9 @@ async def _run_extraction(document_id: str, source_id: str, bucket: str, s3_key:
         logger.warning("Textract extraction failed for document %s: %s", document_id, exc)
         update_document_text_status(document_id, "failed", error=str(exc))
         update_source_status(source_id, "failed")
-    except Exception as exc:  # noqa: BLE001 - guard the background task from crashing silently
+    except Exception:  # noqa: BLE001 - guard the background task from crashing silently
         logger.exception("Unexpected error extracting text for document %s", document_id)
-        update_document_text_status(document_id, "failed", error=f"Unexpected error during extraction: {exc}")
+        update_document_text_status(document_id, "failed", error="Text extraction failed.")
         update_source_status(source_id, "failed")
 
 
@@ -320,14 +320,14 @@ async def extract_document_obligations(
         obligations = await asyncio.to_thread(extract_obligations, extracted_text)
     except BedrockError as exc:
         logger.warning("Obligation extraction failed for document %s: %s", document_id, exc)
-        update_document_obligations_status(document_id, "failed", error=str(exc))
+        update_document_obligations_status(document_id, "failed", error="Obligation extraction failed.")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to extract obligations: {exc}",
+            detail="Failed to extract obligations. Please try again.",
         ) from exc
     except Exception as exc:  # noqa: BLE001 - surface unexpected errors as a clean 500 instead of crashing
         logger.exception("Unexpected error extracting obligations for document %s", document_id)
-        update_document_obligations_status(document_id, "failed", error=str(exc))
+        update_document_obligations_status(document_id, "failed", error="Obligation extraction failed.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while extracting obligations.",

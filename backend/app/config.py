@@ -117,5 +117,14 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Return a cached Settings instance."""
-    return Settings()
+    """Return a cached Settings instance.
+
+    If `FRONTEND_URL` is set, it is added to `cors_origins` (deduplicated)
+    rather than replacing it, so a deployment can set the production
+    frontend's URL without needing to also repeat it inside the
+    `CORS_ORIGINS` JSON list.
+    """
+    settings = Settings()
+    if settings.frontend_url and settings.frontend_url not in settings.cors_origins:
+        settings.cors_origins = [*settings.cors_origins, settings.frontend_url]
+    return settings
