@@ -29,3 +29,19 @@ from app.main import app
 def client() -> TestClient:
     """A FastAPI TestClient wired to the real app, for endpoint-level tests."""
     return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _reset_telegram_login_rate_limit():
+    """Clear the in-memory /login attempt counter before each test.
+
+    `app.services.telegram_link_store._LOGIN_ATTEMPTS` is module-level
+    state (see that module's docstring for why) — without resetting it,
+    a rate-limit test could leak attempt counts into unrelated tests
+    that happen to reuse the same chat_id, or vice versa.
+    """
+    from app.services import telegram_link_store
+
+    telegram_link_store._LOGIN_ATTEMPTS.clear()
+    yield
+    telegram_link_store._LOGIN_ATTEMPTS.clear()

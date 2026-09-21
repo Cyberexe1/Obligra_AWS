@@ -77,6 +77,39 @@ def send_message(chat_id: int | str, text: str) -> None:
         raise TelegramError(f"Telegram API reported failure: {body}")
 
 
+def delete_message(chat_id: int | str, message_id: int) -> None:
+    """Delete a message in a chat via `deleteMessage`.
+
+    Used to scrub the `/login <email> <password>` command from the chat
+    immediately after processing it, since Telegram has no concept of a
+    masked/password-style input for bot commands — the password is
+    otherwise left sitting in plaintext in the chat history on both the
+    user's device and Telegram's servers. Telegram only allows a bot to
+    delete messages in a private chat within 48 hours of being sent, so
+    this is best-effort: failures are logged, never raised, since the
+    login itself has already succeeded or failed by the time this runs
+    and a failed cleanup must not undo that outcome or crash the webhook.
+    """
+    token = _require_token()
+    url = f"{_API_BASE}/bot{token}/deleteMessage"
+
+    try:
+        response = httpx.post(
+            url,
+            json={"chat_id": chat_id, "message_id": message_id},
+            timeout=_REQUEST_TIMEOUT_SECONDS,
+        )
+        body = response.json()
+    except httpx.HTTPError as exc:
+        logger.warning("Failed to reach Telegram API to delete message %s in chat %s: %s", message_id, chat_id, exc)
+        return
+
+    if response.status_code != 200 or not body.get("ok", False):
+        logger.warning(
+            "Telegram declined to delete message %s in chat %s: %s", message_id, chat_id, body
+        )
+
+
 def get_file_path(file_id: str) -> tuple[str, int | None]:
     """Resolve a Telegram `file_id` to a downloadable `file_path`, via `getFile`.
 

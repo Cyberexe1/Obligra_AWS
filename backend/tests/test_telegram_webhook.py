@@ -134,7 +134,7 @@ class TestUnlinkedTelegramUser:
         assert response.status_code == 200
         mock_create_source.assert_not_called()
         reply = mock_send.call_args.args[1]
-        assert reply == "Please connect your OBLIGRA account first using /connect CODE."
+        assert reply == "Please connect your OBLIGRA account first: /login <email> <password>, or /connect CODE."
 
     def test_unlinked_user_text_message_gets_connect_prompt(self, client):
         with patch("app.routers.telegram.get_user_id_for_chat", return_value=None), patch(
@@ -448,6 +448,115 @@ class TestDynamoDBFailure:
         mock_extract_text.assert_not_called()
         reply = mock_send.call_args.args[1]
         assert "connection refused" not in reply
+
+
+class TestLoginCommand:
+    """/login <email> <password> — direct credential-based account linking."""
+
+    def _login_update(self, update_id: int, chat_id: int, message_id: int, text: str) -> dict:
+        return _text_update(update_id, chat_id, message_id, text)
+
+    def test_correct_credentials_links_chat_and_deletes_message(self, client):
+        raw_user = {"user_id": "user-abc", "email": "a@example.com", "password_hash": "hashed"}
+
+        with patch("app.routers.telegram.get_user_by_email_raw", return_value=raw_user), patch(
+            "app.routers.telegram.verify_password", return_value=True
+        ), patch("app.routers.telegram.link_chat_to_user") as mock_link, patch(
+            "app.routers.telegram.delete_message"
+        ) as mock_delete, patch("app.routers.telegram.send_message") as mock_send:
+            response = client.post(
+                WEBHOOK_URL,
+                json=self._login_update(200, 5000, 1, "/login a@example.com correct-password"),
+            )
+
+        assert response.status_code == 200
+        mock_link.assert_called_once_with("5000", "user-abc")
+        mock_delete.assert_called_once_with(5000, 1)
+        reply = mock_send.call_args.args[1]
+        assert "logged in" in reply.lower()
+
+    def test_wrong_password_does_not_link_and_still_deletes_message(self, client):
+        raw_user = {"user_id": "user-abc", "email": "a@example.com", "password_hash": "hashed"}
+
+        with patch("app.routers.telegram.get_user_by_email_raw", return_value=raw_user), patch(
+            "app.routers.telegram.verify_password", return_value=False
+        ), patch("app.routers.telegram.link_chat_to_user") as mock_link, patch(
+            "app.routers.telegram.delete_message"
+        ) as mock_delete, patch("app.routers.telegram.send_message") as mock_send:
+            response = client.post(
+                WEBHOOK_URL,
+                json=self._login_update(201, 5001, 2, "/login a@example.com wrong-password"),
+            )
+
+        assert response.status_code == 200
+        mock_link.assert_not_called()
+        mock_delete.assert_called_once_with(5001, 2)
+        reply = mock_send.call_args.args[1]
+        assert "incorrect" in reply.lower()
+
+    def test_unknown_email_gives_same_reply_as_wrong_password(self, client):
+        """Must not allow email enumeration via distinct error messages."""
+        with patch("app.routers.telegram.get_user_by_email_raw", return_value=None), patch(
+            "app.routers.telegram.link_chat_to_user"
+        ) as mock_link, patch("app.routers.telegram.delete_message"), patch(
+            "app.routers.telegram.send_message"
+        ) as mock_send:
+            response = client.post(
+                WEBHOOK_URL,
+                json=self._login_update(202, 5002, 3, "/login nobody@example.com whatever"),
+            )
+
+        assert response.status_code == 200
+        mock_link.assert_not_called()
+        reply = mock_send.call_args.args[1]
+        assert "incorrect" in reply.lower()
+
+    def test_missing_arguments_prompts_usage_without_calling_lookup(self, client):
+        with patch("app.routers.telegram.get_user_by_email_raw") as mock_lookup, patch(
+            "app.routers.telegram.delete_message"
+        ) as mock_delete, patch("app.routers.telegram.send_message") as mock_send:
+            response = client.post(WEBHOOK_URL, json=self._login_update(203, 5003, 4, "/login"))
+
+        assert response.status_code == 200
+        mock_lookup.assert_not_called()
+        reply = mock_send.call_args.args[1]
+        assert "/login" in reply
+
+    def test_rate_limit_blocks_after_max_attempts(self, client):
+        with patch("app.routers.telegram.get_user_by_email_raw", return_value=None), patch(
+            "app.routers.telegram.delete_message"
+        ), patch("app.routers.telegram.send_message") as mock_send:
+            for i in range(5):
+                client.post(
+                    WEBHOOK_URL,
+                    json=self._login_update(300 + i, 6000, i, "/login a@example.com wrong"),
+                )
+            response = client.post(
+                WEBHOOK_URL,
+                json=self._login_update(310, 6000, 10, "/login a@example.com wrong"),
+            )
+
+        assert response.status_code == 200
+        reply = mock_send.call_args.args[1]
+        assert "too many" in reply.lower()
+
+    def test_password_never_appears_in_any_reply(self, client):
+        raw_user = {"user_id": "user-abc", "email": "a@example.com", "password_hash": "hashed"}
+
+        with patch("app.routers.telegram.get_user_by_email_raw", return_value=raw_user), patch(
+            "app.routers.telegram.verify_password", return_value=True
+        ), patch("app.routers.telegram.link_chat_to_user"), patch(
+            "app.routers.telegram.delete_message"
+        ), patch("app.routers.telegram.send_message") as mock_send:
+            secret_password = "SuperSecretPassword123!"
+            response = client.post(
+                WEBHOOK_URL,
+                json=self._login_update(204, 5004, 5, f"/login a@example.com {secret_password}"),
+            )
+
+        assert response.status_code == 200
+        reply = mock_send.call_args.args[1]
+        assert secret_password not in reply
 
 
 class TestMissingTelegramToken:

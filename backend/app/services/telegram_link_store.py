@@ -158,3 +158,36 @@ def get_user_id_for_chat(chat_id: str) -> str | None:
 
     item = response.get("Item")
     return item["user_id"] if item is not None else None
+
+
+# --- In-memory /login brute-force throttling -------------------------------
+#
+# The web app's POST /auth/login has no rate limiting either (see
+# app/routers/auth.py), but that endpoint at least requires the caller to
+# already know a registered email. The Telegram /login command is reachable
+# by anyone who can open a chat with the bot, so it gets its own lightweight
+# per-chat attempt counter to slow down guessing. This is intentionally
+# in-process memory, not DynamoDB — it only needs to survive within a single
+# App Runner instance's uptime, and adding a table/GSI for something this
+# small would be disproportionate. A restart clears all counters, which is
+# an acceptable tradeoff (fails open to "allow", never fails closed and
+# locks someone out permanently).
+_LOGIN_ATTEMPTS: dict[str, list[datetime]] = {}
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_WINDOW = timedelta(minutes=15)
+
+
+def is_login_rate_limited(chat_id: str) -> bool:
+    """Return True if `chat_id` has made too many /login attempts recently."""
+    now = datetime.now(UTC)
+    attempts = [ts for ts in _LOGIN_ATTEMPTS.get(chat_id, []) if now - ts < _LOGIN_WINDOW]
+    _LOGIN_ATTEMPTS[chat_id] = attempts
+    return len(attempts) >= _LOGIN_MAX_ATTEMPTS
+
+
+def record_login_attempt(chat_id: str) -> None:
+    """Record a /login attempt (successful or not) for `chat_id`'s rate limit."""
+    now = datetime.now(UTC)
+    attempts = [ts for ts in _LOGIN_ATTEMPTS.get(chat_id, []) if now - ts < _LOGIN_WINDOW]
+    attempts.append(now)
+    _LOGIN_ATTEMPTS[chat_id] = attempts

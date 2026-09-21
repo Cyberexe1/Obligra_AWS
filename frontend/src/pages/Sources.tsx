@@ -81,8 +81,8 @@ export default function Sources() {
           <Button type="button" variant="secondary" onClick={loadSources}>
             Refresh
           </Button>
-          <Link to="/add-text">
-            <Button type="button">Add Text</Button>
+          <Link to="/upload">
+            <Button type="button">Add Source</Button>
           </Link>
         </div>
       </div>
@@ -106,11 +106,7 @@ export default function Sources() {
           <p className="font-body-md text-body-md text-on-surface-variant">
             No sources yet.{' '}
             <Link to="/upload" className="font-semibold text-secondary hover:underline">
-              Upload a document
-            </Link>{' '}
-            or{' '}
-            <Link to="/add-text" className="font-semibold text-secondary hover:underline">
-              paste some text
+              Add a source
             </Link>{' '}
             to get started.
           </p>

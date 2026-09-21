@@ -2,7 +2,6 @@ import { Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
-import AddText from './pages/AddText'
 import Dashboard from './pages/Dashboard'
 import Graph from './pages/Graph'
 import Landing from './pages/Landing'
@@ -41,7 +40,6 @@ function App() {
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/upload" element={<Upload />} />
-                <Route path="/add-text" element={<AddText />} />
                 <Route path="/sources" element={<Sources />} />
                 <Route path="/obligations" element={<Obligations />} />
                 <Route path="/risks" element={<Risks />} />

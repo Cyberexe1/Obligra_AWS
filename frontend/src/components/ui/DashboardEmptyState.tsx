@@ -27,12 +27,7 @@ export default function DashboardEmptyState() {
 
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
           <Link to="/upload">
-            <Button type="button">Upload Source</Button>
-          </Link>
-          <Link to="/add-text">
-            <Button type="button" variant="secondary">
-              Add Text
-            </Button>
+            <Button type="button">Add a Source</Button>
           </Link>
         </div>
       </div>

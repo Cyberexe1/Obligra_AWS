@@ -4,6 +4,7 @@ import { useAuth } from '../lib/useAuth'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: 'space_dashboard' },
+  { to: '/upload', label: 'Add Source', icon: 'upload_file' },
   { to: '/sources', label: 'Sources', icon: 'inbox' },
   { to: '/obligations', label: 'Obligations', icon: 'task_alt' },
   { to: '/graph', label: 'Obligation Graph', icon: 'hub' },
@@ -47,7 +48,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         Skip to main content
       </a>
 
-      <aside className="flex flex-col gap-4 border-b border-outline-variant/20 bg-surface-container-lowest p-4 md:h-screen md:w-72 md:border-b-0 md:border-r md:p-6">
+      <aside className="flex flex-col gap-4 border-b border-outline-variant/20 bg-surface-container-lowest p-4 md:sticky md:top-0 md:h-screen md:w-72 md:shrink-0 md:overflow-y-auto md:border-b-0 md:border-r md:p-6">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-[0_2px_8px_rgba(0,0,0,0.15)]">
             <span className="material-symbols-outlined text-[20px] text-on-primary">verified_user</span>

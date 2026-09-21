@@ -263,12 +263,8 @@ export default function Dashboard() {
               {recentSources.length === 0 ? (
                 <p className="py-6 font-body-md text-body-md text-on-surface-variant">
                   No sources yet.{' '}
-                  <Link to="/add-text" className="font-semibold text-secondary hover:underline">
-                    Paste some text
-                  </Link>{' '}
-                  or{' '}
                   <Link to="/upload" className="font-semibold text-secondary hover:underline">
-                    upload a document
+                    Add a source
                   </Link>{' '}
                   to get started.
                 </p>
